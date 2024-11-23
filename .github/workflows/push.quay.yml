@@ -22,7 +22,7 @@ jobs:
 
     - name: Tag existing image
       run: |
-        IMAGE_NAME=react-app
+        IMAGE_NAME=localhost/react-todo-app:latest
         TAG=latest
         podman tag localhost/$IMAGE_NAME quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:$TAG
 
