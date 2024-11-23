@@ -6,8 +6,12 @@ on:
       - main
 
 env:
+  APP_NAME: react-todo-app
   IMAGE_NAME: react-todo-app
-  TAG: latest
+  IMAGE_TAGS: latest
+  IMAGE_REGISTRY: quay.io/${{ secrets.QUAY_USERNAME }}
+  APP_PORT: 8080
+  OPENSHIFT_NAMESPACE: ramadiyandiusna-hcrh-dev
 
 jobs:
   build-push-deploy:
@@ -16,6 +20,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Install Docker
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io
 
     - name: Install OpenShift CLI
       run: |
@@ -26,7 +35,7 @@ jobs:
 
     - name: Build and Tag Image
       run: |
-        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG .
+        docker build -t ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }} .
 
     - name: Log in to Quay.io
       env:
@@ -37,7 +46,7 @@ jobs:
 
     - name: Push Image to Quay.io
       run: |
-        docker push quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
+        docker push ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
 
     - name: Log in to OpenShift
       run: |
@@ -45,13 +54,35 @@ jobs:
           --token=${{ secrets.OPENSHIFT_TOKEN }} \
           --insecure-skip-tls-verify
 
-    - name: Create Namespace (if not exists)
+    - name: Create New Deployment or Update Container Image for Existing Deployment
       run: |
-        oc new-project ramadiyandiusna-hcrh-dev || echo "Namespace already exists"
+        if oc get deployment ${{ env.APP_NAME }} >/dev/null 2>&1; then
+          echo "Deployment ${{ env.APP_NAME }} exists."
+          echo "Updating container image for deployment ${{ env.APP_NAME }} ..."
+          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
+          echo "Image update complete."
+        else
+          echo "Deployment ${{ env.APP_NAME }} does not exist"
+          echo "Creating new deployment..."
+          oc create deployment ${{ env.APP_NAME }} --image=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
+        fi
 
-    - name: Create and expose app
-      uses: redhat-actions/oc-new-app@v1
-      with:
-        app_name: $IMAGE_NAME
-        image: quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
-        namespace: ramadiyandiusna-hcrh-dev
+    - name: Create Service to Expose defined port
+      run: |
+        if oc get service ${{ env.APP_NAME }} >/dev/null 2>&1; then
+          echo "Service ${{ env.APP_NAME }} exists. Skipping..."
+        else
+          echo "Service ${{ env.APP_NAME }} does not exist."
+          echo "Creating new Service..."
+          oc expose deployment ${{ env.APP_NAME }} --port=${{ env.APP_PORT }}
+        fi
+
+    - name: Create Route for Public Access
+      run: |
+        if oc get route ${{ env.APP_NAME }} >/dev/null 2>&1; then
+          echo "Route ${{ env.APP_NAME }} exists. Skipping..."
+        else
+          echo "Route ${{ env.APP_NAME }} does not exist."
+          echo "Creating new Route..."
+          oc create route edge --service=${{ env.APP_NAME }} --insecure-policy=Redirect
+        fi
