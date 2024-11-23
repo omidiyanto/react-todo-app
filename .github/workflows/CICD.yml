@@ -17,10 +17,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Docker and OpenShift CLI
+    - name: Install Docker
       run: |
         sudo apt-get update
-        sudo apt-get install -y docker.io openshift-client
+        sudo apt-get install -y docker.io
+
+    - name: Install OpenShift CLI
+      run: |
+        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+        tar -xzvf openshift-client-linux.tar.gz
+        sudo mv oc kubectl /usr/local/bin/
+        oc version
 
     - name: Build and Tag Image
       run: |
@@ -46,10 +53,6 @@ jobs:
     - name: Create Namespace (if not exists)
       run: |
         oc new-project ramadiyandiusna-hcrh-dev || echo "Namespace already exists"
-
-    - name: Delete existing app (optional)
-      run: |
-        oc delete all -l app=$IMAGE_NAME || echo "No existing app to delete"
 
     - name: Create and expose app
       uses: redhat-actions/oc-new-app@v1
