@@ -22,5 +22,4 @@ jobs:
 
     - name: Push image to Quay.io
       run: |
-        TAG=latest
-        podman push quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:$TAG
+        podman push quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:latest
