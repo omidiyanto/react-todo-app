@@ -1,0 +1,59 @@
+name: CI/CD for React App
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: react-todo-app
+  TAG: latest
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Docker and OpenShift CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io openshift-client
+
+    - name: Build and Tag Image
+      run: |
+        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG .
+
+    - name: Log in to Quay.io
+      env:
+        QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+        QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      run: |
+        echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USERNAME" --password-stdin
+
+    - name: Push Image to Quay.io
+      run: |
+        docker push quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
+
+    - name: Log in to OpenShift
+      run: |
+        oc login ${{ secrets.OPENSHIFT_SERVER }} \
+          --token=${{ secrets.OPENSHIFT_TOKEN }} \
+          --insecure-skip-tls-verify
+
+    - name: Create Namespace (if not exists)
+      run: |
+        oc new-project ramadiyandiusna-hcrh-dev || echo "Namespace already exists"
+
+    - name: Delete existing app (optional)
+      run: |
+        oc delete all -l app=$IMAGE_NAME || echo "No existing app to delete"
+
+    - name: Create and expose app
+      uses: redhat-actions/oc-new-app@v1
+      with:
+        app_name: $IMAGE_NAME
+        image: quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
+        namespace: ramadiyandiusna-hcrh-dev
