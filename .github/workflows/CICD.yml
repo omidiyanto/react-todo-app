@@ -17,11 +17,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-
     - name: Install OpenShift CLI
       run: |
         curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
