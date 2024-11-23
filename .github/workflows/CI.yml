@@ -1,0 +1,33 @@
+name: CI/CD for React App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build and Tag Image
+      run: |
+        IMAGE_NAME=react-todo-app
+        TAG=latest
+        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG .
+    
+    - name: Log in to Quay.io
+      env:
+        QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
+        QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+      run: |
+        echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USERNAME" --password-stdin
+
+    - name: Push Image to Quay.io
+      run: |
+        IMAGE_NAME=react-todo-app
+        TAG=latest
+        docker push quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
