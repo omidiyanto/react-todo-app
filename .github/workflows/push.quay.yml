@@ -1,4 +1,4 @@
-name: Build and Push to Quay.io
+name: Push Existing Image to Quay.io
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-push:
+  push-image:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,8 +20,13 @@ jobs:
       run: |
         echo "$QUAY_PASSWORD" | podman login quay.io -u "$QUAY_USERNAME" --password-stdin
 
-    - name: Build image with Podman
-      run: podman build -t quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:latest .
+    - name: Tag existing image
+      run: |
+        IMAGE_NAME=localhost/react-todo-app
+        TAG=latest
+        podman tag localhost/$IMAGE_NAME quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:$TAG
 
     - name: Push image to Quay.io
-      run: podman push quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:latest
+      run: |
+        TAG=latest
+        podman push quay.io/${{ secrets.QUAY_USERNAME }}/react-todo-app:$TAG
