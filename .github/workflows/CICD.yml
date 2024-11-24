@@ -5,32 +5,27 @@ on:
     branches:
       - main
 
-env:
-  APP_NAME: react-todo-app
-  IMAGE_NAME: react-todo-app
-  IMAGE_TAGS: latest
-  IMAGE_REGISTRY: quay.io/${{ secrets.QUAY_USERNAME }}
-  APP_PORT: 8080
-  OPENSHIFT_NAMESPACE: ramadiyandiusna-hcrh-dev
-
 jobs:
-  build-push-deploy:
+  build-push:
     runs-on: ubuntu-latest
+
+    env:
+      APP_NAME: react-todo-app
+      OPENSHIFT_NAMESPACE: ramadiyandiusna-hcrh-dev
+      IMAGE_REGISTRY: quay.io
+      IMAGE_TAGS: latest                       
+      OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
+      OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install OpenShift CLI
-      run: |
-        curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
-        tar -xzvf openshift-client-linux.tar.gz
-        sudo mv oc kubectl /usr/local/bin/
-        oc version
-
     - name: Build and Tag Image
       run: |
-        docker build -t ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }} .
+        IMAGE_NAME=react-todo-app
+        TAG=latest
+        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG .
 
     - name: Log in to Quay.io
       env:
@@ -41,9 +36,11 @@ jobs:
 
     - name: Push Image to Quay.io
       run: |
-        docker push ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
+        IMAGE_NAME=react-todo-app
+        TAG=latest
+        docker push quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
 
-    - name: Log in to OpenShift
+    - name: Login to OpenShift
       run: |
         oc login ${{ secrets.OPENSHIFT_SERVER }} \
           --token=${{ secrets.OPENSHIFT_TOKEN }} \
@@ -51,33 +48,33 @@ jobs:
 
     - name: Create New Deployment or Update Container Image for Existing Deployment
       run: |
-        if oc get deployment ${{ env.APP_NAME }} >/dev/null 2>&1; then
+        if oc get deployment ${{ env.APP_NAME }} -n ${{ env.OPENSHIFT_NAMESPACE }} >/dev/null 2>&1; then
           echo "Deployment ${{ env.APP_NAME }} exists."
           echo "Updating container image for deployment ${{ env.APP_NAME }} ..."
-          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
+          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.IMAGE_REGISTRY }}/${{ secrets.QUAY_USERNAME }}/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
           echo "Image update complete."
         else
           echo "Deployment ${{ env.APP_NAME }} does not exist"
           echo "Creating new deployment..."
-          oc create deployment ${{ env.APP_NAME }} --image=${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAGS }}
+          oc create deployment ${{ env.APP_NAME }} --image=${{ env.IMAGE_REGISTRY }}/${{ secrets.QUAY_USERNAME }}/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
         fi
 
     - name: Create Service to Expose defined port
       run: |
-        if oc get service ${{ env.APP_NAME }} >/dev/null 2>&1; then
+        if oc get service ${{ env.APP_NAME }} -n ${{ env.OPENSHIFT_NAMESPACE }} >/dev/null 2>&1; then
           echo "Service ${{ env.APP_NAME }} exists. Skipping..."
         else
           echo "Service ${{ env.APP_NAME }} does not exist."
           echo "Creating new Service..."
-          oc expose deployment ${{ env.APP_NAME }} --port=${{ env.APP_PORT }}
+          oc expose deployment ${{ env.APP_NAME }} --port=8080 -n ${{ env.OPENSHIFT_NAMESPACE }}
         fi
 
     - name: Create Route for Public Access
       run: |
-        if oc get route ${{ env.APP_NAME }} >/dev/null 2>&1; then
+        if oc get route ${{ env.APP_NAME }} -n ${{ env.OPENSHIFT_NAMESPACE }} >/dev/null 2>&1; then
           echo "Route ${{ env.APP_NAME }} exists. Skipping..."
         else
           echo "Route ${{ env.APP_NAME }} does not exist."
           echo "Creating new Route..."
-          oc create route edge --service=${{ env.APP_NAME }} --insecure-policy=Redirect
+          oc create route edge --service=${{ env.APP_NAME }} --insecure-policy=Redirect -n ${{ env.OPENSHIFT_NAMESPACE }}
         fi
