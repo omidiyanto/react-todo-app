@@ -18,6 +18,7 @@ RUN npm run build
 
 # Gunakan nginx untuk production stage
 FROM nginx:alpine
+USER root
 
 # Salin build output ke NGINX public folder
 COPY --from=build /app/build /usr/share/nginx/html
