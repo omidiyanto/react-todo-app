@@ -11,11 +11,11 @@ jobs:
 
     env:
       APP_NAME: react-todo-app
-      OPENSHIFT_NAMESPACE: ramadiyandiusna-hcrh-dev
+      OPENSHIFT_NAMESPACE: omidiyanto-dev
       IMAGE_REGISTRY: quay.io
       IMAGE_TAGS: latest                       
-      OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
-      OPENSHIFT_TOKEN: ${{ secrets.OPENSHIFT_TOKEN }}
+      OPENSHIFT_SERVER: "https://api.sandbox-m4.g2pi.p1.openshiftapps.com:6443"
+      OPENSHIFT_TOKEN: "sha256~FQM4Gk0m2YURtEy2swGmt1_xUFHwjSEfu-AxD9Ij7uw"
 
     steps:
     - name: Checkout code
@@ -25,25 +25,25 @@ jobs:
       run: |
         IMAGE_NAME=react-todo-app
         TAG=latest
-        docker build -t quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG .
+        docker build -t quay.io/omidiyanto/$IMAGE_NAME:$TAG .
 
     - name: Log in to Quay.io
       env:
         QUAY_USERNAME: ${{ secrets.QUAY_USERNAME }}
         QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
       run: |
-        echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USERNAME" --password-stdin
+        echo "omi120133550077" | docker login quay.io -u "omidiyanto" --password-stdin
 
     - name: Push Image to Quay.io
       run: |
         IMAGE_NAME=react-todo-app
         TAG=latest
-        docker push quay.io/${{ secrets.QUAY_USERNAME }}/$IMAGE_NAME:$TAG
+        docker push quay.io/omidiyanto/$IMAGE_NAME:$TAG
 
     - name: Login to OpenShift
       run: |
-        oc login ${{ secrets.OPENSHIFT_SERVER }} \
-          --token=${{ secrets.OPENSHIFT_TOKEN }} \
+        oc login ${{ env.OPENSHIFT_SERVER }} \
+          --token=${{ env.OPENSHIFT_TOKEN }} \
           --insecure-skip-tls-verify
 
     - name: Create New Deployment or Update Container Image for Existing Deployment
@@ -51,7 +51,7 @@ jobs:
         if oc get deployment ${{ env.APP_NAME }} -n ${{ env.OPENSHIFT_NAMESPACE }} >/dev/null 2>&1; then
           echo "Deployment ${{ env.APP_NAME }} exists."
           echo "Updating container image for deployment ${{ env.APP_NAME }} ..."
-          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.IMAGE_REGISTRY }}/${{ secrets.QUAY_USERNAME }}/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
+          oc set image deployment/${{ env.APP_NAME }} ${{ env.APP_NAME }}=${{ env.IMAGE_REGISTRY }}/omidiyanto/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
           echo "Image update complete."
         else
           echo "Deployment ${{ env.APP_NAME }} does not exist"
