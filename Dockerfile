@@ -18,7 +18,7 @@ RUN npm run build
 
 # Gunakan nginx untuk production stage
 FROM nginx:alpine
-USER root
+RUN chmod -R 777 /var
 
 # Salin build output ke NGINX public folder
 COPY --from=build /app/build /usr/share/nginx/html
