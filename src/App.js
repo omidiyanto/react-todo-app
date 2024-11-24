@@ -9,7 +9,7 @@ function App() {
   return (
     <>
       <div className="container">
-        <PageTitle>omi - TODO List</PageTitle>
+        <PageTitle>v2-TODO List</PageTitle>
         <div className={styles.app__wrapper}>
           <AppHeader />
           <AppContent />
