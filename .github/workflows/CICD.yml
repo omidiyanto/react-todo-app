@@ -56,7 +56,7 @@ jobs:
         else
           echo "Deployment ${{ env.APP_NAME }} does not exist"
           echo "Creating new deployment..."
-          oc create deployment ${{ env.APP_NAME }} --image=${{ env.IMAGE_REGISTRY }}/${{ secrets.QUAY_USERNAME }}/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
+          oc create deployment ${{ env.APP_NAME }} --image=${{ env.IMAGE_REGISTRY }}/omidiyanto/${{ env.APP_NAME }}:${{ env.IMAGE_TAGS }} -n ${{ env.OPENSHIFT_NAMESPACE }}
         fi
 
     - name: Create Service to Expose defined port
