@@ -14,10 +14,10 @@ RUN npm install
 COPY . .
 
 # Build aplikasi untuk production
-RUN npm run build
+RUN npm run build 
 
 # Gunakan nginx untuk production stage
-FROM nginx:alpine
+FROM nginx:alpine AS production
 RUN chmod -R 777 /var
 RUN chown -R 1002710000:0 /var 
 
